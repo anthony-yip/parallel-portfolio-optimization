@@ -35,7 +35,14 @@ public:
     static ExpectedReturns estimate_expected_returns(const TimeSeriesStockData& data);
     static CovarianceMatrix calculate_sample_covariance_matrix(const TimeSeriesStockData& data, const ExpectedReturns& expected_returns);
     static CovarianceMatrix shrink_covariance_matrix(CovarianceMatrix sample_covariance_matrix, float shrinkage_factor);
+    static Portfolio solve(CovarianceMatrix covariance_matrix, ExpectedReturns expected_returns);
 
+private:
+    static void swapRows(CovarianceMatrix& matrix, ExpectedReturns& vector, int row1, int row2);
+    static void scaleRow(CovarianceMatrix& matrix, ExpectedReturns& vector, int row, float scale);
+    static void rowOperation(CovarianceMatrix& matrix, ExpectedReturns& vector, int target_row, int source_row, float scale);
+    static void gaussianElimination(CovarianceMatrix& matrix, ExpectedReturns& vector);
+    static Portfolio backSubstitution(CovarianceMatrix& matrix, ExpectedReturns& vector);
 };
 
 

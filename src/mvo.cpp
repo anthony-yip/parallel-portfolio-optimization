@@ -7,6 +7,8 @@
 #include <sstream>
 #include <string>
 #include <assert.h>
+#include <vector>
+#include <cmath>
 
 TimeSeriesStockData MVO::read_historical_data(const std::string &file_path) {
     std::ifstream file(file_path);
@@ -90,4 +92,75 @@ CovarianceMatrix MVO::shrink_covariance_matrix(CovarianceMatrix sample_covarianc
     }
 }
 
+/// Perform Gaussian decomposition on the covariance matrix to find the optimal portfolio weights.
+Portfolio MVO::solve(CovarianceMatrix covariance_matrix, ExpectedReturns expected_returns) {
+    gaussianElimination(covariance_matrix, expected_returns);
+    return backSubstitution(covariance_matrix, expected_returns);
+}
 
+
+// Function to swap two rows in the matrix
+void swapRows(CovarianceMatrix& matrix, ExpectedReturns& vector, int row1, int row2) {
+    for (int col = 0; col < num_stocks; col++) {
+        std::swap(index_cov_matrix(matrix, row1, col), index_cov_matrix(matrix, row2, col));
+    }
+    std::swap(vector[row1], vector[row2]);
+}
+
+// Function to multiply a row by a scalar
+void scaleRow(CovarianceMatrix& matrix, ExpectedReturns& vector, int row, float scale) {
+    for (int col = 0; col < num_stocks; col++) {
+        index_cov_matrix(matrix, row, col) *= scale;
+    }
+    vector[row] *= scale;
+}
+
+// Function to add a multiple of one row to another
+void rowOperation(CovarianceMatrix& matrix, ExpectedReturns& vector, int target_row, int source_row, float scale) {
+    for (int col = 0; col < num_stocks; col++) {
+        index_cov_matrix(matrix, target_row, col) += scale * index_cov_matrix(matrix, source_row, col);
+    }
+    vector[target_row] += scale * vector[source_row];
+}
+
+// Gaussian elimination method
+void gaussianElimination(CovarianceMatrix& matrix, ExpectedReturns& vector) {
+    int i = 0;
+    int j = 0;
+    while (i < num_stocks && j < num_stocks) {
+        // Find maximum in the current column starting from the pivot
+        int max_row = i;
+        for (int k = i + 1; k < num_stocks; k++) {
+            if (std::abs(matrix[k * num_stocks + j]) > std::abs(matrix[max_row * num_stocks + j])) {
+                max_row = k;
+            }
+        }
+
+        // Swap maximum row with current row
+        if (max_row != i) {
+            swapRows(matrix, vector, i, max_row);
+        }
+
+        // Make all rows below this one 0 in current column
+        for (int k = i + 1; k < num_stocks; k++) {
+            float scale = -index_cov_matrix(matrix, k, j) / index_cov_matrix(matrix, i, j);
+            rowOperation(matrix, vector, k, i, scale);
+        }
+
+        i++;
+        j++;
+    }
+}
+
+// Back substitution method
+Portfolio backSubstitution(CovarianceMatrix& matrix, ExpectedReturns& vector) {
+    Portfolio x;
+    for (int i = num_stocks - 1; i >= 0; i--) {
+        float sum = 0;
+        for (int j = i + 1; j < num_stocks; j++) {
+            sum += index_cov_matrix(matrix, i, j) * x[j];
+        }
+        x[i] = (vector[i] - sum) / index_cov_matrix(matrix, i, i);
+    }
+    return x;
+}

@@ -11,4 +11,4 @@ inline float& index_cov_matrix(CovarianceMatrix& matrix, int i, int j) {
     return matrix[i * num_stocks + j];
 }
 inline constexpr float shrinkage_factor = 0.2; ///< Shrinkage factor for Ledoit-Wolf.
-//typedef std::array<double, num_stocks> Portfolio; ///< Portfolio type
+typedef std::array<float, num_stocks> Portfolio; ///< Portfolio type
