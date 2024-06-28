@@ -4,13 +4,17 @@
 #include "mvo.h"
 #include <iostream>
 
+extern void test_3x3();
 
 int main() {
+    test_3x3();
+
     std::string file_path = "../data/monthly_returns.csv";
     TimeSeriesStockData data = MVO::read_historical_data(file_path);
     ExpectedReturns expected_returns = MVO::estimate_expected_returns(data);
     CovarianceMatrix sample_covariance_matrix = MVO::shrink_covariance_matrix(MVO::calculate_sample_covariance_matrix(data, expected_returns), shrinkage_factor);
     Portfolio portfolio = MVO::solve(sample_covariance_matrix, expected_returns); ///< @note use std::move after testing for better performance.
+
 
     /// Testing:
     std::cout << "Number of stocks: " << data.size() << std::endl;
@@ -27,13 +31,13 @@ int main() {
     }
     std::cout << std::endl;
 
-    std::cout << "Sample covariance matrix: " << std::endl;
-    for (int i = 0; i < num_stocks; i++) {
-        for (int j = 0; j < num_stocks; j++) {
-            std::cout << sample_covariance_matrix[i * num_stocks + j] << " ";
-        }
-        std::cout << std::endl;
-    }
+//    std::cout << "Sample covariance matrix: " << std::endl;
+//    for (int i = 0; i < num_stocks; i++) {
+//        for (int j = 0; j < num_stocks; j++) {
+//            std::cout << sample_covariance_matrix[i * num_stocks + j] << " ";
+//        }
+//        std::cout << std::endl;
+//    }
 
     std::cout << "Portfolio: ";
     for (int i = 0; i < num_stocks; i++) {
