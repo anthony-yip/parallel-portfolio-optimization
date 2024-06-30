@@ -8,9 +8,17 @@
 class MVOThrust {
 public:
     MVOThrust(TimeSeriesStockData data);
-    static Portfolio solve();
+    Portfolio solve();
 private:
-    m_historical_data;
+    thrust::device_vector<float> m_historical_data;
+    thrust::device_vector<float> m_covariance_matrix;
+    thrust::device_vector<float> m_expected_returns;
+    size_t m_num_timesteps;
+
+    void estimate_expected_returns(); // or thrust::device_vector<float> estimate_expected_returns()???;
+    void calculate_sample_covariance_matrix();
+    void shrink_covariance_matrix(float shrinkage_factor);
+
 };
 
 
