@@ -2,7 +2,7 @@
 // Created by anthony on 6/28/24.
 //
 #pragma once
-#include "constants.h"
+#include "constants.cuh"
 #include <thrust/device_vector.h>
 
 class MVOThrust {

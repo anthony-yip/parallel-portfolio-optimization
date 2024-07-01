@@ -4,7 +4,7 @@
 #include <vector>
 #include <array>
 #include <string>
-#include "constants.h"
+#include "constants.cuh"
 
 /// Stocks in the model
 enum class Stock {

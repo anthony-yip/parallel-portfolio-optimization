@@ -65,8 +65,9 @@ Portfolio MVOThrust::solve()
     thrust::transform(m_expected_returns.begin(), m_expected_returns.end(), m_expected_returns.begin(), SubtractRiskFreeRate(risk_free_rate));
     thrust::device_vector<float> portfolio_weights(num_stocks);
     MatSol_cuSolver<num_stocks>::solve(m_covariance_matrix, m_expected_returns, portfolio_weights);
+    // std::vector<float> result(num_stocks);
     Portfolio result;
-    std::copy(portfolio_weights.begin(), portfolio_weights.end(), result);
+    thrust::copy(portfolio_weights.begin(), portfolio_weights.end(), result.begin());
     return result;
 }
 

@@ -5,18 +5,20 @@ project(parallel_portfolio_optimization LANGUAGES CXX CUDA)
 include_directories(${CUDA_INCLUDE_DIRS})
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -G -gencode arch=compute_70,code=compute_70")
 
 add_executable(parallel_portfolio_optimization
-        src/main.cpp
-        src/mvo.h
-        src/mvo.cpp
-        src/constants.h
+        src/main.cu
+        src/mvo.cuh
+        src/mvo.cu
+        src/constants.cuh
         src/utils.h
-        tests/matrix_solve_test.cpp
+        tests/matrix_solve_test.cu
         src/matrix_solve.h
         src/mvo_thrust.cu
         src/mvo_thrust.cuh
         src/functors.cuh
-        src/matsol_thrust.cu
-        src/matsol_thrust.cuh)
-target_link_libraries(parallel_portfolio_optimization ${CUDA_LIBRARIES})
+        src/matsol_thrust.cuh
+        src/matsol_thrust.cu)
+target_link_libraries(parallel_portfolio_optimization ${CUDA_LIBRARIES} -lcublas)

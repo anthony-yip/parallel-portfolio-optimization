@@ -2,7 +2,7 @@
 // Created by anthony on 6/7/24.
 //
 
-#include "mvo.h"
+#include "mvo.cuh"
 #include <fstream>
 #include <sstream>
 #include <string>
