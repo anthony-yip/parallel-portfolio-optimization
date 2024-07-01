@@ -2,4 +2,3 @@ cmake-build-debug/
 **/venv
 *.xopp
 .idea/
-data/

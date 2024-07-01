@@ -20,8 +20,6 @@ void test_3x3() {
     vector = {13, 18, 26};
     correct_solution = {2,1,3};
     solution = MatSol<3>::solve(matrix, vector);
-    MatSol<3>::PrintVector(solution);
-    MatSol<3>::PrintVector(correct_solution);
     assert(MatSol<3>::VectorEquals(solution, correct_solution));
 }
 

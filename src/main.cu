@@ -2,22 +2,23 @@
 // Created by anthony on 6/7/24.
 //
 #include "mvo.cuh"
+#include "mvo_thrust.cuh"
 #include <iostream>
 
 extern void test_3x3();
 extern void test_3x3_cuSolver();
 
 int main() {
-    // test_3x3();
+    test_3x3();
     test_3x3_cuSolver();
 
-//     std::string file_path = "../data/monthly_returns.csv";
-//     TimeSeriesStockData data = MVO::read_historical_data(file_path);
-//     ExpectedReturns expected_returns = MVO::estimate_expected_returns(data);
-//     CovarianceMatrix sample_covariance_matrix = MVO::shrink_covariance_matrix(MVO::calculate_sample_covariance_matrix(data, expected_returns), shrinkage_factor);
-//     Portfolio portfolio = MVO::solve(sample_covariance_matrix, expected_returns); ///< @note use std::move after testing for better performance.
-//
-//
+     std::string file_path = "../data/monthly_returns.csv";
+     TimeSeriesStockData data = MVO::read_historical_data(file_path);
+     ExpectedReturns expected_returns = MVO::estimate_expected_returns(data);
+     CovarianceMatrix sample_covariance_matrix = MVO::shrink_covariance_matrix(MVO::calculate_sample_covariance_matrix(data, expected_returns), shrinkage_factor);
+     Portfolio portfolio = MVO::solve(sample_covariance_matrix, expected_returns); ///< @note use std::move after testing for better performance.
+
+
 //     /// Testing:
 //     std::cout << "Number of stocks: " << data.size() << std::endl;
 //     for (int i = 0; i < data.size(); i++) {
@@ -41,10 +42,18 @@ int main() {
 // //        std::cout << std::endl;
 // //    }
 //
-//     std::cout << "Portfolio: ";
-//     for (int i = 0; i < num_stocks; i++) {
-//         std::cout << portfolio[i] << " ";
-//     }
-//     std::cout << std::endl;
+    std::cout << "Portfolio: ";
+    for (int i = 0; i < num_stocks; i++)
+    {
+        std::cout << portfolio[i] << " ";
+    }
+    std::cout << std::endl;
+    MVOThrust mvo_thrust {data};
+    Portfolio portfolio_thrust = mvo_thrust.solve();
+    std::cout << "Portfolio: ";
+    for (int i = 0; i < num_stocks; i++)
+    {
+        std::cout << portfolio_thrust[i] << " ";
+    }
     return 0;
 }
