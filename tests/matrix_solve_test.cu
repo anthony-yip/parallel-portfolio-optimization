@@ -32,7 +32,7 @@ void test_3x3_cuSolver() {
     matrix = {2, 1, 1, 3, 2, 3, 2, 1, 2};
     vector = {7, 16, 10};
     correct_solution = {1, 2, 3};
-    MatSol_cuSolver<3>::solve(matrix, vector, solution);
+    cuMatSol<3>::solve(matrix, vector, solution);
     thrust::copy(solution.begin(), solution.end(), std::ostream_iterator<float>(std::cout, " "));
     // std::for_each(solution.begin(), solution.end(), [](float& x) { x = round(x); });
     // assert(thrust::equal(solution.begin(), solution.end(), correct_solution.begin()));
@@ -40,7 +40,7 @@ void test_3x3_cuSolver() {
     matrix = {1, 2, 3, 2, 5, 3, 1, 0, 8};
     vector = {13, 18, 26};
     correct_solution = {2,1,3};
-    MatSol_cuSolver<3>::solve(matrix, vector, solution);
+    cuMatSol<3>::solve(matrix, vector, solution);
     thrust::copy(solution.begin(), solution.end(), std::ostream_iterator<float>(std::cout, " "));
     // std::for_each(solution.begin(), solution.end(), [](float& x) { x = round(x); });
     // assert(thrust::equal(solution.begin(), solution.end(), correct_solution.begin()));

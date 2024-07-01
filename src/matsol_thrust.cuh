@@ -72,7 +72,7 @@ inline const char* cublasGetErrorString(cublasStatus_t status) {
 }
 
 template<int N>
-class MatSol_cuSolver
+class cuMatSol
 {
 public:
     /**
@@ -83,75 +83,54 @@ public:
      */
     static void solve(thrust::device_vector<float>& A, thrust::device_vector<float>& b, thrust::device_vector<float>& x)
     {
-        // std::ostream_iterator<float> print_it {std::cout, " "};
-        // thrust::copy(A.begin(), A.end(),  print_it); std::cout << std::endl;
-        // thrust::device_vector<float> A_transposed (N * N);
-        // auto transformed = thrust::make_transform_iterator(thrust::counting_iterator(0), RowToColumnMajor(N));
-        // thrust::copy(transformed, transformed + N * N, print_it); std::cout << std::endl;
-        //
-        //
-        // auto permutation_it = thrust::make_permutation_iterator(A.begin(), transformed);
-        // thrust::copy(permutation_it, permutation_it + N * N, print_it); std::cout << std::endl;
-        // thrust::copy(thrust::make_permutation_iterator(A.begin(), transformed),
-        //              thrust::make_permutation_iterator(A.begin(), transformed + N * N),
-        //              A_transposed.begin());
-        //
-        // thrust::copy(A_transposed.begin(), A_transposed.end(), std::ostream_iterator<float>(std::cout, " "));
-        // std::cout << std::endl;
-        // thrust::copy(b.begin(), b.end(), std::ostream_iterator<float>(std::cout, " "));
-        // std::cout << std::endl;
         // Convert device_vector to raw pointers
         float* raw_A = thrust::raw_pointer_cast(A.data());
         float* raw_b = thrust::raw_pointer_cast(b.data());
         float* raw_x = thrust::raw_pointer_cast(x.data());
 
+        // Prepare arguments for both rf and rs
         cublasHandle_t cublas_handle;
         CUBLAS_ERRCHECK(cublasCreate(&cublas_handle));
+        float ** a_batch; CUDA_ERRCHECK(cudaMalloc(&a_batch, sizeof(float*)));
+        CUDA_ERRCHECK(cudaMemcpy(a_batch, &raw_A, sizeof(float*), cudaMemcpyDefault));
+        float ** b_batch; CUDA_ERRCHECK(cudaMalloc(&b_batch, sizeof(float*)));
+        CUDA_ERRCHECK(cudaMemcpy(b_batch, &raw_b, sizeof(float*), cudaMemcpyDefault));
+        int * permutation_array; CUDA_ERRCHECK(cudaMalloc(&permutation_array, N * sizeof(int)));
+        int * info_array_lu; CUDA_ERRCHECK(cudaMalloc(&info_array_lu, sizeof(int)));
+
+#ifdef DEBUG
+        float ** h_a_batch_debug = (float**) malloc(sizeof(float*));
+        CUDA_ERRCHECK(cudaMemcpy(h_a_batch_debug, a_batch, sizeof(float*), cudaMemcpyDefault));
+        float ** h_b_batch_debug = (float**) malloc(sizeof(float*));
+        CUDA_ERRCHECK(cudaMemcpy(h_b_batch_debug, b_batch, sizeof(float*), cudaMemcpyDefault));
+        free(h_a_batch_debug), free(h_b_batch_debug);
+#endif
+
 
         // Do LU decomposition
-        float ** h_a_batch; h_a_batch = (float**) malloc(sizeof(float*));
-        h_a_batch[0] = raw_A;
-        float ** a_batch; CUDA_ERRCHECK(cudaMalloc(&a_batch, sizeof(float*)));
-        CUDA_ERRCHECK(cudaMemcpy(a_batch, h_a_batch, sizeof(float*), cudaMemcpyDefault));
-        int * permutation_array; CUDA_ERRCHECK(cudaMalloc(&permutation_array, N * sizeof(int)));
-        int * info_array; CUDA_ERRCHECK(cudaMalloc(&info_array, sizeof(int)));
+        CUBLAS_ERRCHECK(cublasSgetrfBatched(cublas_handle, N, a_batch, N, permutation_array, info_array_lu, 1));
 
-        float ** h_a_batch_debug; h_a_batch_debug = (float**) malloc(sizeof(float*));
-        CUDA_ERRCHECK(cudaMemcpy(h_a_batch_debug, a_batch, sizeof(float*), cudaMemcpyDefault));
-
-        // Solve the LU system
-        float ** h_b_batch; h_b_batch = (float**) malloc(sizeof(float*));
-        h_b_batch[0] = raw_b;
-        float ** b_batch; CUDA_ERRCHECK(cudaMalloc(&b_batch, sizeof(float*)));
-        CUDA_ERRCHECK(cudaMemcpy(b_batch, h_b_batch, sizeof(float*), cudaMemcpyDefault));
-
-        float ** h_b_batch_debug; h_b_batch_debug = (float**) malloc(sizeof(float*));
-        CUDA_ERRCHECK(cudaMemcpy(h_b_batch_debug, b_batch, sizeof(float*), cudaMemcpyDefault));
-
-        CUDA_ERRCHECK(cudaDeviceSynchronize());
-        CUBLAS_ERRCHECK(cublasSgetrfBatched(cublas_handle, N, a_batch, N, permutation_array, info_array, 1));
-        CUDA_ERRCHECK(cudaDeviceSynchronize());
-
-
-
-        int * h_info_array; h_info_array = (int*) malloc(sizeof(int));
-        CUDA_ERRCHECK(cudaMemcpy(h_info_array, info_array, sizeof(int), cudaMemcpyDefault));
-        if (h_info_array[0] != 0) {
+#ifdef DEBUG
+        int * h_info_array_lu = (int*) malloc(sizeof(int));
+        CUDA_ERRCHECK(cudaMemcpy(h_info_array_lu, info_array_lu, sizeof(int), cudaMemcpyDefault));
+        if (h_info_array_lu[0] != 0) {
             std::cerr << "Error: LU decomposition failed" << std::endl;
             exit(EXIT_FAILURE);
         }
-        //thrust::copy(A.begin(), A.end(), std::ostream_iterator<float>(std::cout, " "));
+        free(h_into_array_lu);
+#endif
 
-        //
-        // // Create an array of pointers on the host
-        // float* h_b_batch[1] = {raw_b};
-        // // Copy the array of pointers to the device
-        // CUDA_ERRCHECK(cudaMemcpy(b_batch, h_b_batch, sizeof(float*), cudaMemcpyHostToDevice));
-        //
-        // int *d_InfoArray; CUDA_ERRCHECK(cudaMalloc(&d_InfoArray, sizeof(int)));
-        int *info_array2; info_array2 = (int*) malloc(sizeof(int));
+        int *info_array_solve = (int*) malloc(sizeof(int));
+        // Solve the LU system
         /// CUBLAS_OP_T (transpose) is used because cuBLAS uses column-major order, whereas we use row-major order.
-        CUBLAS_ERRCHECK(cublasSgetrsBatched(cublas_handle, CUBLAS_OP_T, N, 1, a_batch, N, permutation_array, b_batch, N, info_array2, 1));
+        CUBLAS_ERRCHECK(cublasSgetrsBatched(cublas_handle, CUBLAS_OP_T, N, 1, a_batch, N, permutation_array, b_batch, N, info_array_solve, 1));
+
+#ifdef DEBUG
+        if (info_array_solve[0] != 0)
+        {
+            std::cerr << "Error: Solving the system of linear equations failed" << std::endl;
+        }
+#endif
 
         // Copy the solution to the output vector
         CUDA_ERRCHECK(cudaMemcpy(raw_x, raw_b, N * sizeof(float), cudaMemcpyDefault));
@@ -160,37 +139,8 @@ public:
         CUDA_ERRCHECK(cudaFree(a_batch));
         CUDA_ERRCHECK(cudaFree(b_batch));
         CUDA_ERRCHECK(cudaFree(permutation_array));
+        CUDA_ERRCHECK(cudaFree(info_array_lu));
+        free(info_array_solve);
         CUBLAS_ERRCHECK(cublasDestroy(cublas_handle));
     }
-
-        // // Initialize cuSolver
-        // cusolverDnHandle_t handle = NULL;
-        // cusolverDnCreate(&handle);
-        //
-        // // Create a buffer for cuSolver operations
-        // int work_size = 0;
-        // cusolverDnSgetrf_bufferSize(handle, N, N, raw_A, N, &work_size);
-        //
-        // // Allocate the buffer
-        // float* work;
-        // cudaMalloc(&work, work_size * sizeof(float));
-        //
-        // // Compute the LU factorization of the matrix A
-        // int* devIpiv;
-        // cudaMalloc(&devIpiv, N * sizeof(int));
-        // int* devInfo;
-        // cudaMalloc(&devInfo, sizeof(int));
-        // cusolverDnSgetrf(handle, N, N, raw_A, N, work, devIpiv, &devInfo);
-        //
-        // // Solve the system of linear equations
-        // cusolverDnSgetrs(handle, CUBLAS_OP_N, N, 1, raw_A, N, devIpiv, raw_b, N, &devInfo);
-        //
-        // // Copy the solution to the output vector
-        // cudaMemcpy(raw_x, raw_b, N * sizeof(float), cudaMemcpyDeviceToDevice);
-
-        // Free the cuSolver handle and the buffer
-        // cusolverDnDestroy(handle);
-        // cudaFree(work);
-        // cudaFree(devIpiv);
-        // cudaFree(devInfo);
 };
